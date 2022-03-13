@@ -206,6 +206,44 @@ int query_in_pgtbl(void *pgtbl, vaddr_t va, paddr_t *pa, pte_t **entry)
          * return the pa and pte until a L0/L1 block or page, return
          * `-ENOMAPPING` if the va is not mapped.
          */
+        ptp_t *cur_ptp = (ptp_t *)pgtbl;
+        ptp_t *next_ptp;
+        pte_t *pte;
+
+        for(int i = 0; i <= 3; i++){
+                int type = get_next_ptp(cur_ptp, i, va, &next_ptp, &pte, false);
+                if(type == BLOCK_PTP){
+                        *entry = pte;
+                        switch (i)
+                        {
+                        case 1:
+                                *pa = virt_to_phys((vaddr_t) next_ptp) + GET_VA_OFFSET_L1(va);
+                                break;
+
+                        case 2:
+                                *pa = virt_to_phys((vaddr_t) next_ptp) + GET_VA_OFFSET_L2(va);
+                                break;
+                        
+                        default:
+                                break;
+                        }
+
+                        return 0;
+                }
+                else{
+                        if(type == NORMAL_PTP){
+                                cur_ptp = next_ptp;
+                        }
+                        else{
+                                return type;
+                        }
+                }
+        }
+
+        *entry = pte;
+        *pa = virt_to_phys((vaddr_t) next_ptp) + GET_VA_OFFSET_L3(va);
+
+        return 0;
 
         /* LAB 2 TODO 3 END */
 }
@@ -220,6 +258,101 @@ int map_range_in_pgtbl(void *pgtbl, vaddr_t va, paddr_t pa, size_t len,
          * pte with the help of `set_pte_flags`. Iterate until all pages are
          * mapped.
          */
+        ptp_t *ptp_0, *ptp_1, *ptp_2, *ptp_3;
+        ptp_0 = (ptp_t *)pgtbl;
+        pte_t *pte_0, *pte_1, *pte_2, *pte_3;
+
+        while(true){
+                if(len >= (1 << 30)){
+                        kinfo("L1 block\n");
+                        len -= (1 << 30);
+                        int type = get_next_ptp(ptp_0, 0, va, &ptp_1, &pte_0, true);
+                        if(type < 0){
+                                return type;
+                        }
+                        // type = get_next_ptp(ptp_1, 1, va, &ptp_2, &pte_1, true);
+                        // if(type < 0){
+                        //         return type;
+                        // }
+                        int index = GET_L1_INDEX(va);
+                        pte_1 = &(ptp_1->ent[index]);
+                        pte_1->l1_block.is_valid = 1;
+                        pte_1->l1_block.is_table = 0;
+                        pte_1->l1_block.pfn = pa >> 30;
+                        set_pte_flags(pte_1, flags, USER_PTE);
+                        
+                        va += (1 << 30);
+                        pa += (1 << 30); 
+                }
+                else{
+                        if(len >= (2 << 20)){
+                                kinfo("L2 block\n");
+                                len -= (2 << 20);
+                                int type = get_next_ptp(ptp_0, 0, va, &ptp_1, &pte_0, true);
+                                if(type < 0){
+                                        return type;
+                                }
+                                
+                                type = get_next_ptp(ptp_1, 1, va, &ptp_2, &pte_1, true);
+                                if(type < 0){
+                                        return type;
+                                }
+                                
+                                // type = get_next_ptp(ptp_2, 2, va, &ptp_3, &pte_2, true);
+                                // if(type < 0){
+                                //         return type;
+                                // }
+                                int index = GET_L2_INDEX(va);
+                                pte_2 = &(ptp_2->ent[index]);
+                                pte_2->l2_block.is_table = 0;
+                                pte_2->l2_block.is_valid = 1;
+                                pte_2->l2_block.pfn = pa >> 21;
+                                set_pte_flags(pte_2, flags, USER_PTE);
+
+                                va += (2 << 20);
+                                pa += (2 << 20);               
+                        }
+                        else{
+                                if(len > 0){
+                                        len -= PAGE_SIZE;
+                                        int type = get_next_ptp(ptp_0, 0, va, &ptp_1, &pte_0, true);
+                                        if(type < 0){
+                                                return type;
+                                        }
+                                        
+                                        type = get_next_ptp(ptp_1, 1, va, &ptp_2, &pte_1, true);
+                                        if(type < 0){
+                                                return type;
+                                        }
+                                        
+                                        type = get_next_ptp(ptp_2, 2, va, &ptp_3, &pte_2, true);
+                                        if(type < 0){
+                                                return type;
+                                        }
+                                        
+                                        // ptp_t *next_ptp;
+                                        // type = get_next_ptp(ptp_3, 3, va, &next_ptp, &pte_3, true);
+                                        // if(type < 0){
+                                        //         return type;
+                                        // }
+                                        int index = GET_L3_INDEX(va);
+                                        pte_t *pte_3 = &(ptp_3->ent[index]);
+                                        pte_3->l3_page.is_page = 1;
+                                        pte_3->l3_page.is_valid = 1;
+                                        pte_3->l3_page.pfn = pa >> PAGE_SHIFT;
+                                        set_pte_flags(pte_3, flags, USER_PTE);
+                                        // set_pte_flags(pte_3, flags, USER_PTE);
+                                        // pte_3->l3_page.pfn = pa >> PAGE_SHIFT;
+
+                                        va += PAGE_SIZE;
+                                        pa += PAGE_SIZE;
+                                }
+                                else{
+                                        return 0;
+                                }
+                        }
+                } 
+        }
 
         /* LAB 2 TODO 3 END */
 }
@@ -232,6 +365,99 @@ int unmap_range_in_pgtbl(void *pgtbl, vaddr_t va, size_t len)
          * mark the final level pte as invalid. Iterate until all pages are
          * unmapped.
          */
+        ptp_t *ptp_0, *ptp_1, *ptp_2, *ptp_3;
+        ptp_0 = (ptp_t *)pgtbl;
+        pte_t *pte_0, *pte_1, *pte_2, *pte_3;
+
+        while(true){
+                if(len >= (1 << 30)){
+                        kinfo("L1 block\n");
+                        len -= (1 << 30);
+                        int type = get_next_ptp(ptp_0, 0, va, &ptp_1, &pte_0, true);
+                        if(type < 0){
+                                return type;
+                        }
+                        type = get_next_ptp(ptp_1, 1, va, &ptp_2, &pte_1, true);
+                        if(type < 0){
+                                return type;
+                        }
+                        // int index = GET_L1_INDEX(va);
+                        // pte_1 = &(ptp_1->ent[index]);
+                        pte_1->l1_block.is_valid = 0;
+                        // pte_1->l1_block.is_valid = 1;
+                        // pte_1->l1_block.is_table = 0;
+                        // // pte_1->l1_block.pfn = pa >> 30;
+                        // set_pte_flags(pte_1, flags, USER_PTE);
+                        // pte_1->l3_page.pfn = pa >> PAGE_SHIFT;
+                        // // pte_1->l1_block.is_table = false;
+                        va += (1 << 30);
+                }
+                else{
+                        if(len >= (2 << 20)){
+                                kinfo("L2 block\n");
+                                len -= (2 << 20);
+                                int type = get_next_ptp(ptp_0, 0, va, &ptp_1, &pte_0, true);
+                                if(type < 0){
+                                        return type;
+                                }
+                                
+                                type = get_next_ptp(ptp_1, 1, va, &ptp_2, &pte_1, true);
+                                if(type < 0){
+                                        return type;
+                                }
+                                
+                                type = get_next_ptp(ptp_2, 2, va, &ptp_3, &pte_2, true);
+                                if(type < 0){
+                                        return type;
+                                }
+                                // int index = GET_L2_INDEX(va);
+                                // pte_2 = &(ptp_2->ent[index]);
+                                pte_2->l2_block.is_valid = 0;
+
+                                // pte_2->l2_block.is_valid = 1;
+                                // pte_2->l2_block.is_table = 0; 
+                                // // pte_2->l2_block.pfn = pa >> 21;
+                                // pte_2->l3_page.pfn = pa >> PAGE_SHIFT;
+                                // set_pte_flags(pte_2, flags, USER_PTE);
+                                // pte_2->l2_block.is_table = false;
+                                va += (2 << 20);          
+                        }
+                        else{
+                                if(len > 0){
+                                        kinfo("L3 info\n");
+                                        len -= PAGE_SIZE;
+                                        int type = get_next_ptp(ptp_0, 0, va, &ptp_1, &pte_0, false);
+                                        if(type < 0){
+                                                return type;
+                                        }
+                                        
+                                        type = get_next_ptp(ptp_1, 1, va, &ptp_2, &pte_1, false);
+                                        if(type < 0){
+                                                return type;
+                                        }
+                                        
+                                        type = get_next_ptp(ptp_2, 2, va, &ptp_3, &pte_2, false);
+                                        if(type < 0){
+                                                return type;
+                                        }
+                                        
+                                        ptp_t *next_ptp;
+                                        type = get_next_ptp(ptp_3, 3, va, &next_ptp, &pte_3, false);
+                                        if(type < 0){
+                                                return type;
+                                        }
+                                        // int index = GET_L3_INDEX(va);
+                                        // pte_3 = &(ptp_3->ent[index]);
+                                        pte_3->l3_page.is_valid = 0;
+
+                                        va += PAGE_SIZE;
+                                }
+                                else{
+                                        return 0;
+                                }
+                        }
+                } 
+        }
 
         /* LAB 2 TODO 3 END */
 }
@@ -329,6 +555,7 @@ void lab2_test_page_table(void)
                      va += 5 * PAGE_SIZE + 0x100) {
                         ret = query_in_pgtbl(pgtbl, va, &pa, &pte);
                         lab_assert(ret == 0 && pa == va);
+                        // kinfo("va is %lu and pa is %lu\n", va, pa);
                 }
 
                 ret = unmap_range_in_pgtbl(pgtbl, 0x100000000, len);
