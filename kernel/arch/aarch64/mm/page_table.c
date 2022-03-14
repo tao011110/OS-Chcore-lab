@@ -280,19 +280,12 @@ int map_range_in_pgtbl(void *pgtbl, vaddr_t va, paddr_t pa, size_t len,
                         return type;
                 }
                 
-                // ptp_t *next_ptp;
-                // type = get_next_ptp(ptp_3, 3, va, &next_ptp, &pte_3, true);
-                // if(type < 0){
-                //         return type;
-                // }
                 int index = GET_L3_INDEX(va);
                 pte_3 = &(ptp_3->ent[index]);
                 pte_3->l3_page.is_page = 1;
                 pte_3->l3_page.is_valid = 1;
                 pte_3->l3_page.pfn = pa >> PAGE_SHIFT;
                 set_pte_flags(pte_3, flags, USER_PTE);
-                // set_pte_flags(pte_3, flags, USER_PTE);
-                // pte_3->l3_page.pfn = pa >> PAGE_SHIFT;
 
                 va += PAGE_SIZE;
                 pa += PAGE_SIZE;
@@ -337,8 +330,6 @@ int unmap_range_in_pgtbl(void *pgtbl, vaddr_t va, size_t len)
                 if(type < 0){
                         return type;
                 }
-                // int index = GET_L3_INDEX(va);
-                // pte_3 = &(ptp_3->ent[index]);
                 pte_3->l3_page.is_valid = 0;
 
                 va += PAGE_SIZE;
@@ -359,16 +350,12 @@ int map_range_in_pgtbl_huge(void *pgtbl, vaddr_t va, paddr_t pa, size_t len,
 
         while(true){
                 if(len >= (1 << 30)){
-                        kinfo("L1 block\n");
                         len -= (1 << 30);
                         int type = get_next_ptp(ptp_0, 0, va, &ptp_1, &pte_0, true);
                         if(type < 0){
                                 return type;
                         }
-                        // type = get_next_ptp(ptp_1, 1, va, &ptp_2, &pte_1, true);
-                        // if(type < 0){
-                        //         return type;
-                        // }
+                        
                         int index = GET_L1_INDEX(va);
                         pte_1 = &(ptp_1->ent[index]);
                         pte_1->l1_block.is_valid = 1;
@@ -381,7 +368,6 @@ int map_range_in_pgtbl_huge(void *pgtbl, vaddr_t va, paddr_t pa, size_t len,
                 }
                 else{
                         if(len >= (2 << 20)){
-                                kinfo("L2 block\n");
                                 len -= (2 << 20);
                                 int type = get_next_ptp(ptp_0, 0, va, &ptp_1, &pte_0, true);
                                 if(type < 0){
@@ -393,10 +379,6 @@ int map_range_in_pgtbl_huge(void *pgtbl, vaddr_t va, paddr_t pa, size_t len,
                                         return type;
                                 }
                                 
-                                // type = get_next_ptp(ptp_2, 2, va, &ptp_3, &pte_2, true);
-                                // if(type < 0){
-                                //         return type;
-                                // }
                                 int index = GET_L2_INDEX(va);
                                 pte_2 = &(ptp_2->ent[index]);
                                 pte_2->l2_block.is_table = 0;
@@ -425,19 +407,12 @@ int map_range_in_pgtbl_huge(void *pgtbl, vaddr_t va, paddr_t pa, size_t len,
                                                 return type;
                                         }
                                         
-                                        // ptp_t *next_ptp;
-                                        // type = get_next_ptp(ptp_3, 3, va, &next_ptp, &pte_3, true);
-                                        // if(type < 0){
-                                        //         return type;
-                                        // }
                                         int index = GET_L3_INDEX(va);
                                         pte_3 = &(ptp_3->ent[index]);
                                         pte_3->l3_page.is_page = 1;
                                         pte_3->l3_page.is_valid = 1;
                                         pte_3->l3_page.pfn = pa >> PAGE_SHIFT;
                                         set_pte_flags(pte_3, flags, USER_PTE);
-                                        // set_pte_flags(pte_3, flags, USER_PTE);
-                                        // pte_3->l3_page.pfn = pa >> PAGE_SHIFT;
 
                                         va += PAGE_SIZE;
                                         pa += PAGE_SIZE;
@@ -461,7 +436,6 @@ int unmap_range_in_pgtbl_huge(void *pgtbl, vaddr_t va, size_t len)
 
         while(true){
                 if(len >= (1 << 30)){
-                        kinfo("L1 block\n");
                         len -= (1 << 30);
                         int type = get_next_ptp(ptp_0, 0, va, &ptp_1, &pte_0, true);
                         if(type < 0){
@@ -471,20 +445,11 @@ int unmap_range_in_pgtbl_huge(void *pgtbl, vaddr_t va, size_t len)
                         if(type < 0){
                                 return type;
                         }
-                        // int index = GET_L1_INDEX(va);
-                        // pte_1 = &(ptp_1->ent[index]);
                         pte_1->l1_block.is_valid = 0;
-                        // pte_1->l1_block.is_valid = 1;
-                        // pte_1->l1_block.is_table = 0;
-                        // // pte_1->l1_block.pfn = pa >> 30;
-                        // set_pte_flags(pte_1, flags, USER_PTE);
-                        // pte_1->l3_page.pfn = pa >> PAGE_SHIFT;
-                        // // pte_1->l1_block.is_table = false;
                         va += (1 << 30);
                 }
                 else{
                         if(len >= (2 << 20)){
-                                kinfo("L2 block\n");
                                 len -= (2 << 20);
                                 int type = get_next_ptp(ptp_0, 0, va, &ptp_1, &pte_0, true);
                                 if(type < 0){
@@ -500,21 +465,11 @@ int unmap_range_in_pgtbl_huge(void *pgtbl, vaddr_t va, size_t len)
                                 if(type < 0){
                                         return type;
                                 }
-                                // int index = GET_L2_INDEX(va);
-                                // pte_2 = &(ptp_2->ent[index]);
                                 pte_2->l2_block.is_valid = 0;
-
-                                // pte_2->l2_block.is_valid = 1;
-                                // pte_2->l2_block.is_table = 0; 
-                                // // pte_2->l2_block.pfn = pa >> 21;
-                                // pte_2->l3_page.pfn = pa >> PAGE_SHIFT;
-                                // set_pte_flags(pte_2, flags, USER_PTE);
-                                // pte_2->l2_block.is_table = false;
                                 va += (2 << 20);          
                         }
                         else{
                                 if(len > 0){
-                                        kinfo("L3 info\n");
                                         len -= PAGE_SIZE;
                                         int type = get_next_ptp(ptp_0, 0, va, &ptp_1, &pte_0, false);
                                         if(type < 0){
@@ -536,8 +491,6 @@ int unmap_range_in_pgtbl_huge(void *pgtbl, vaddr_t va, size_t len)
                                         if(type < 0){
                                                 return type;
                                         }
-                                        // int index = GET_L3_INDEX(va);
-                                        // pte_3 = &(ptp_3->ent[index]);
                                         pte_3->l3_page.is_valid = 0;
 
                                         va += PAGE_SIZE;
@@ -686,7 +639,6 @@ void lab2_test_page_table(void)
                      va += 5 * PAGE_SIZE + 0x100) {
                         ret = query_in_pgtbl(pgtbl, va, &pa, &pte);
                         lab_assert(ret == 0 && pa == va);
-                        // kinfo("va is %lu and pa is %lu\n", va, pa);
                 }
 
                 ret = unmap_range_in_pgtbl_huge(pgtbl, 0x100000000, len);
