@@ -13,6 +13,7 @@ extern "C" {
 static inline void __chcore_sys_putc(char ch)
 {
         /* LAB 3 TODO BEGIN */
+         __chcore_syscall1(__CHCORE_SYS_putc, (long)ch);
 
         /* LAB 3 TODO END */
 }
@@ -21,6 +22,7 @@ static inline u32 __chcore_sys_getc(void)
 {
         u32 ret = -1;
         /* LAB 3 TODO BEGIN */
+        ret = __chcore_syscall0(__CHCORE_SYS_getc);
 
         /* LAB 3 TODO END */
         return ret;
@@ -147,7 +149,7 @@ static inline int __chcore_sys_create_thread(u64 thread_args_p)
 static inline void __chcore_sys_thread_exit(void)
 {
         /* LAB 3 TODO BEGIN */
-
+        __chcore_syscall0(__CHCORE_SYS_thread_exit);
         /* LAB 3 TODO END */
 }
 

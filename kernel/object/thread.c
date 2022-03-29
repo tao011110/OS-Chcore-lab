@@ -96,6 +96,19 @@ static u64 load_binary(struct cap_group *cap_group, struct vmspace *vmspace,
                         seg_sz = elf->p_headers[i].p_memsz;
                         p_vaddr = elf->p_headers[i].p_vaddr;
                         /* LAB 3 TODO BEGIN */
+                        seg_map_sz = ROUND_UP(seg_sz + p_vaddr, PAGE_SIZE) - ROUND_DOWN(p_vaddr, PAGE_SIZE);
+                        pmo_cap[i] = create_pmo(seg_map_sz, PMO_DATA, cap_group, &pmo);
+                        if(pmo_cap[i] < 0){
+                                r = pmo_cap[i];
+                                goto out_free_obj;
+                        }
+                        
+                        // TODO: Is it aligned forward or backward?
+                        // memcpy((void *)(phys_to_virt(pmo->start) + (p_vaddr - ROUND_DOWN(p_vaddr, PAGE_SIZE))),
+                        //         bin + elf->p_headers[i].p_offset, elf->p_headers[i].p_filesz);
+                        memcpy((void *)phys_to_virt(pmo->start), bin + elf->p_headers[i].p_offset, elf->p_headers[i].p_filesz);
+                        flags = PFLAGS2VMRFLAGS(elf->p_headers[i].p_flags);
+                        ret = vmspace_map_range(vmspace, p_vaddr, seg_map_sz, flags, pmo);
 
                         /* LAB 3 TODO END */
                         BUG_ON(ret != 0);
@@ -114,6 +127,8 @@ static u64 load_binary(struct cap_group *cap_group, struct vmspace *vmspace,
 
         /* PC: the entry point */
         return elf->header.e_entry;
+out_free_obj:
+        obj_free(pmo);
 out_free_cap:
         for (--i; i >= 0; i--) {
                 if (pmo_cap[i] != 0)
@@ -387,6 +402,10 @@ void sys_thread_exit(void)
         printk("\nBack to kernel.\n");
 #endif
         /* LAB 3 TODO BEGIN */
+        int cpu_id = smp_get_cpu_id();
+        struct thread *cur_thread = current_threads[cpu_id];
+        obj_free(cur_thread);
+        current_threads[cpu_id] = NULL;
 
         /* LAB 3 TODO END */
         printk("Lab 3 hang.\n");
