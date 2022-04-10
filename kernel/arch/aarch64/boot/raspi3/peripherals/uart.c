@@ -74,9 +74,14 @@ static void early_uart_send(unsigned int c)
         early_put32(AUX_MU_IO_REG, c);
 }
 
+/* This function just iterates over all characters in a string 
+        and sends them one by one using early_uart_send().
+*/
 void uart_send_string(char *str)
 {
         /* LAB 1 TODO 3 BEGIN */
-
+        for (int i = 0; str[i] != '\0'; i++) {
+                early_uart_send((char)str[i]);
+        }
         /* LAB 1 TODO 3 END */
 }
