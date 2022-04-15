@@ -81,6 +81,7 @@ void unlock(struct lock *l)
         smp_mb(); /* load, store -> store barrier may use stlr here */
         /* LAB 4: set the correct lock->owner */
         /* LAB 4 TODO BEGIN */
+        lock->owner++;
 
         /* LAB 4 TODO END */
 }
@@ -90,6 +91,10 @@ int is_locked(struct lock *l)
         int ret = 0;
         struct lock_impl *lock = (struct lock_impl *)l;
         /* LAB 4 TODO BEGIN */
+        // doesn't get the lock
+        if(lock->owner < lock->next){
+                ret = 1;
+        }
 
         /* LAB 4 TODO END */
         return ret;
@@ -106,6 +111,7 @@ void kernel_lock_init(void)
         u32 ret = 0;
 
         /* LAB 4 TODO BEGIN */
+        ret = lock_init(&big_kernel_lock);
 
         /* LAB 4 TODO END */
         BUG_ON(ret != 0);
@@ -118,6 +124,8 @@ void kernel_lock_init(void)
 void lock_kernel(void)
 {
         /* LAB 4 TODO BEGIN */
+        // kinfo("lock kernel\n");
+        lock(&big_kernel_lock);
 
         /* LAB 4 TODO END */
 }
@@ -130,6 +138,8 @@ void unlock_kernel(void)
 {
         BUG_ON(!is_locked(&big_kernel_lock));
         /* LAB 4 TODO BEGIN */
+        // kinfo("unlock kernel\n");
+        unlock(&big_kernel_lock);
 
         /* LAB 4 TODO END */
 }

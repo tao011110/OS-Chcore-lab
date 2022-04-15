@@ -297,6 +297,7 @@ static int create_thread(struct cap_group *cap_group, u64 stack, u64 pc,
 {
         struct thread *thread;
         int cap, ret = 0;
+        kinfo("create thread\n");
 
         if (!cap_group) {
                 ret = -ECAPBILITY;
@@ -333,6 +334,7 @@ static int create_thread(struct cap_group *cap_group, u64 stack, u64 pc,
         } else if (type == TYPE_SHADOW) {
                 thread->thread_ctx->state = TS_WAITING;
         }
+        // print_thread(thread);
         return cap;
 
 out_free_obj:
@@ -402,15 +404,19 @@ void sys_thread_exit(void)
         printk("\nBack to kernel.\n");
 #endif
         /* LAB 3 TODO BEGIN */
+        kinfo("sys_thread_exit\n");
         int cpu_id = smp_get_cpu_id();
         struct thread *cur_thread = current_threads[cpu_id];
-        obj_free(cur_thread);
-        current_threads[cpu_id] = NULL;
+        cur_thread->thread_ctx->thread_exit_state = TE_EXITING;
+        // obj_free(cur_thread);
+        // current_threads[cpu_id] = NULL;
 
         /* LAB 3 TODO END */
         /* Reschedule */
         sched();
+        kinfo("end sched\n");
         eret_to_thread(switch_context());
+        kinfo("end eret\n");
 }
 
 /*

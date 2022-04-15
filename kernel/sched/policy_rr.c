@@ -49,6 +49,17 @@ struct thread idle_threads[PLAT_CPU_NUM];
 int rr_sched_enqueue(struct thread *thread)
 {
         /* LAB 4 TODO BEGIN */
+        if(!thread || !(thread->thread_ctx) || thread->thread_ctx->state == TS_READY){
+                return -1;
+        }
+        if(thread->thread_ctx->type == TYPE_IDLE){
+                return 0;
+        }
+        u32 cpu_id = smp_get_cpu_id();
+        list_append(&(thread->ready_queue_node), &(rr_ready_queue_meta[cpu_id].queue_head));
+        rr_ready_queue_meta[cpu_id].queue_len++;
+        thread->thread_ctx->cpuid = cpu_id;
+        thread->thread_ctx->state = TS_READY;
 
         /* LAB 4 TODO END */
         return 0;
@@ -63,6 +74,17 @@ int rr_sched_enqueue(struct thread *thread)
 int rr_sched_dequeue(struct thread *thread)
 {
         /* LAB 4 TODO BEGIN */
+        if(!thread || !(thread->thread_ctx) || thread->thread_ctx->state != TS_READY){
+                return -1;
+        }
+        if(thread->thread_ctx->type == TYPE_IDLE){
+                kinfo("dequeue idle\n");
+                return 0;
+        }
+        list_del(&thread->ready_queue_node);
+        u32 cpu_id = smp_get_cpu_id();
+        rr_ready_queue_meta[cpu_id].queue_len--;
+        thread->thread_ctx->state = TS_INTER;
 
         /* LAB 4 TODO END */
         return 0;
@@ -79,6 +101,16 @@ struct thread *rr_sched_choose_thread(void)
 {
         struct thread *thread = NULL;
         /* LAB 4 TODO BEGIN */
+        u32 cpu_id = smp_get_cpu_id();
+        if(!rr_ready_queue_meta[cpu_id].queue_len){
+                kinfo("choose idle %d\n", smp_get_cpu_id());
+                thread = &idle_threads[cpu_id];
+        }
+        else{
+                kinfo("choose head %d\n", smp_get_cpu_id());
+                thread = list_entry(rr_ready_queue_meta[cpu_id].queue_head.next, struct thread, ready_queue_node);
+        }
+        rr_sched_dequeue(thread);
 
         /* LAB 4 TODO END */
         return thread;
@@ -91,6 +123,7 @@ struct thread *rr_sched_choose_thread(void)
 static inline void rr_sched_refill_budget(struct thread *target, u32 budget)
 {
         /* LAB 4 TODO BEGIN */
+        target->thread_ctx->sc->budget = budget;
 
         /* LAB 4 TODO END */
 }
@@ -113,6 +146,25 @@ static inline void rr_sched_refill_budget(struct thread *target, u32 budget)
 int rr_sched(void)
 {
         /* LAB 4 TODO BEGIN */
+        if(current_thread != NULL){
+                if(current_thread->thread_ctx != NULL){
+                        if((!current_thread->thread_ctx->sc && current_thread->thread_ctx->sc->budget != 0)
+                        || (current_thread->thread_ctx->state != TS_RUNNING && current_thread->thread_ctx->state != TS_WAITING
+                                && current_thread->thread_ctx->state != TS_EXIT)){
+                                return 0;
+                        }
+                }
+                if(current_thread->thread_ctx != NULL && current_thread->thread_ctx->thread_exit_state == TE_EXITING){
+                        current_thread->thread_ctx->thread_exit_state = TE_EXITED;
+                        current_thread->thread_ctx->state = TS_EXIT;
+                }
+                rr_sched_enqueue(current_thread);
+        }
+        struct thread *thread = rr_sched_choose_thread();
+        rr_sched_refill_budget(thread, DEFAULT_BUDGET);
+        kinfo("wwwwwwwwwwww\n");
+        switch_to_thread(thread);
+        kinfo("ppppppppppppppppp\n");
 
         /* LAB 4 TODO END */
 
