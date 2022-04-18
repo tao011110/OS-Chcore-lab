@@ -56,7 +56,14 @@ int rr_sched_enqueue(struct thread *thread)
                 return 0;
         }
         u32 cpu_id = smp_get_cpu_id();
-        list_append(&(thread->ready_queue_node), &(rr_ready_queue_meta[cpu_id].queue_head));
+        if(thread->thread_ctx->affinity != NO_AFF){
+                cpu_id = thread->thread_ctx->affinity;
+        }
+        if (cpu_id < 0 || cpu_id >= PLAT_CPU_NUM) {
+                kinfo("wrong cpu_id is %d", cpu_id);
+                return -1;
+        }
+        list_add(&(thread->ready_queue_node), &(rr_ready_queue_meta[cpu_id].queue_head));
         rr_ready_queue_meta[cpu_id].queue_len++;
         thread->thread_ctx->cpuid = cpu_id;
         thread->thread_ctx->state = TS_READY;
@@ -107,8 +114,8 @@ struct thread *rr_sched_choose_thread(void)
                 thread = &idle_threads[cpu_id];
         }
         else{
-                kinfo("choose head %d\n", smp_get_cpu_id());
-                thread = list_entry(rr_ready_queue_meta[cpu_id].queue_head.next, struct thread, ready_queue_node);
+                kinfo("choose head %d and len is %d\n", smp_get_cpu_id(), rr_ready_queue_meta[cpu_id].queue_len);
+                thread = list_entry(rr_ready_queue_meta[cpu_id].queue_head.prev, struct thread, ready_queue_node);
         }
         rr_sched_dequeue(thread);
 
@@ -146,25 +153,24 @@ static inline void rr_sched_refill_budget(struct thread *target, u32 budget)
 int rr_sched(void)
 {
         /* LAB 4 TODO BEGIN */
-        if(current_thread != NULL){
-                if(current_thread->thread_ctx != NULL){
-                        if((!current_thread->thread_ctx->sc && current_thread->thread_ctx->sc->budget != 0)
-                        || (current_thread->thread_ctx->state != TS_RUNNING && current_thread->thread_ctx->state != TS_WAITING
-                                && current_thread->thread_ctx->state != TS_EXIT)){
-                                return 0;
-                        }
+        if(current_thread != NULL && current_thread->thread_ctx != NULL){
+                if((current_thread->thread_ctx->sc != NULL && current_thread->thread_ctx->sc->budget != 0)
+                || (current_thread->thread_ctx->state != TS_RUNNING && current_thread->thread_ctx->state != TS_WAITING
+                        && current_thread->thread_ctx->state != TS_EXIT)){
+                                kinfo("return 0\n");
+                        return 0;
                 }
-                if(current_thread->thread_ctx != NULL && current_thread->thread_ctx->thread_exit_state == TE_EXITING){
+                if(current_thread->thread_ctx->thread_exit_state == TE_EXITING){
                         current_thread->thread_ctx->thread_exit_state = TE_EXITED;
                         current_thread->thread_ctx->state = TS_EXIT;
                 }
-                rr_sched_enqueue(current_thread);
+                else{
+                        rr_sched_enqueue(current_thread);
+                }
         }
         struct thread *thread = rr_sched_choose_thread();
         rr_sched_refill_budget(thread, DEFAULT_BUDGET);
-        kinfo("wwwwwwwwwwww\n");
         switch_to_thread(thread);
-        kinfo("ppppppppppppppppp\n");
 
         /* LAB 4 TODO END */
 
@@ -188,6 +194,7 @@ int rr_sched_init(void)
         }
 
         /* Create a fake idle cap group to store the name */
+        kinfo("Create a fake idle cap group to store the name\n");
         idle_cap_group = kzalloc(sizeof(*idle_cap_group));
         memset(idle_cap_group->cap_group_name, 0, MAX_GROUP_NAME_LEN);
         if (name_len > MAX_GROUP_NAME_LEN)
@@ -199,6 +206,7 @@ int rr_sched_init(void)
         idle_vmspace = create_idle_vmspace();
 
         /* Initialize one idle thread for each core and insert into the RQ */
+        kinfo("Initialize one idle thread for each core and insert into the RQ\n");
         for (i = 0; i < PLAT_CPU_NUM; i++) {
                 /* Set the thread context of the idle threads */
                 BUG_ON(!(idle_threads[i].thread_ctx =

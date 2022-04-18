@@ -98,16 +98,16 @@ static u64 load_binary(struct cap_group *cap_group, struct vmspace *vmspace,
                         p_vaddr = elf->p_headers[i].p_vaddr;
                         /* LAB 3 TODO BEGIN */
                         seg_map_sz = ROUND_UP(seg_sz + p_vaddr, PAGE_SIZE) - ROUND_DOWN(p_vaddr, PAGE_SIZE);
-                        pmo_cap[i] = create_pmo(seg_map_sz, PMO_DATA, cap_group, &pmo);
-                        if(pmo_cap[i] < 0){
-                                r = pmo_cap[i];
+                        r = create_pmo(seg_map_sz, PMO_DATA, cap_group, &pmo);
+                        if(r < 0){
                                 goto out_free_obj;
                         }
+                        pmo_cap[i] = r;
                         
                         // TODO: Is it aligned forward or backward?
-                        // memcpy((void *)(phys_to_virt(pmo->start) + (p_vaddr - ROUND_DOWN(p_vaddr, PAGE_SIZE))),
-                        //         bin + elf->p_headers[i].p_offset, elf->p_headers[i].p_filesz);
-                        memcpy((void *)phys_to_virt(pmo->start), bin + elf->p_headers[i].p_offset, elf->p_headers[i].p_filesz);
+                        memcpy((void *)(phys_to_virt(pmo->start) + (p_vaddr - ROUND_DOWN(p_vaddr, PAGE_SIZE))),
+                                bin + elf->p_headers[i].p_offset, elf->p_headers[i].p_filesz);
+                        // memcpy((void *)phys_to_virt(pmo->start), bin + elf->p_headers[i].p_offset, elf->p_headers[i].p_filesz);
                         flags = PFLAGS2VMRFLAGS(elf->p_headers[i].p_flags);
                         ret = vmspace_map_range(vmspace, p_vaddr, seg_map_sz, flags, pmo);
 
@@ -404,19 +404,15 @@ void sys_thread_exit(void)
         printk("\nBack to kernel.\n");
 #endif
         /* LAB 3 TODO BEGIN */
-        kinfo("sys_thread_exit\n");
-        int cpu_id = smp_get_cpu_id();
-        struct thread *cur_thread = current_threads[cpu_id];
-        cur_thread->thread_ctx->thread_exit_state = TE_EXITING;
+        // current_thread->thread_ctx->state = TS_INTER;
+        current_thread->thread_ctx->thread_exit_state = TE_EXITING;
         // obj_free(cur_thread);
         // current_threads[cpu_id] = NULL;
 
         /* LAB 3 TODO END */
         /* Reschedule */
         sched();
-        kinfo("end sched\n");
         eret_to_thread(switch_context());
-        kinfo("end eret\n");
 }
 
 /*
@@ -449,6 +445,7 @@ int sys_set_affinity(u64 thread_cap, s32 aff)
         }
 
         /* LAB 4 TODO BEGIN */
+        thread->thread_ctx->affinity = aff;
 
         /* LAB 4 TODO END */
         if (thread_cap != -1)
@@ -472,6 +469,7 @@ s32 sys_get_affinity(u64 thread_cap)
         if (thread == NULL)
                 return -ECAPBILITY;
         /* LAB 4 TODO BEGIN */
+        aff = thread->thread_ctx->affinity;
 
         /* LAB 4 TODO END */
 

@@ -177,7 +177,7 @@ sync_el0_64:
 	mrs	x2, elr_el1
 	bl	handle_entry_c
 
-	; bl unlock_kernel
+	bl unlock_kernel
 	exception_exit
 
 el0_syscall:

@@ -67,7 +67,6 @@ void main(paddr_t boot_flag)
         arch_interrupt_init();
         /* LAB 4 TODO BEGIN */
         // kernel_lock_init();
-        // lock_kernel();
 
         /* LAB 4 TODO END */
         kinfo("[ChCore] interrupt init finished\n");
@@ -80,8 +79,13 @@ void main(paddr_t boot_flag)
         sched_init(&rr);
         kinfo("[ChCore] sched init finished\n");
 
+        timer_init();
+        kinfo("[ChCore] timer init finished\n");
+
         /* Other cores are busy looping on the addr, wake up those cores */
+        lock_kernel();
         enable_smp_cores(boot_flag);
+        unlock_kernel();
         kinfo("[ChCore] boot multicore finished\n");
 
 #ifdef CHCORE_KERNEL_TEST
@@ -119,8 +123,9 @@ void secondary_start(void)
 
         /* LAB 4 TODO BEGIN */
         // secondary_init_c(cpuid);
+        sched_init(&rr);
+        timer_init();
         /* LAB 4 TODO END */
-
         lock_kernel();
         sched();
         eret_to_thread(switch_context());
