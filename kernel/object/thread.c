@@ -297,7 +297,6 @@ static int create_thread(struct cap_group *cap_group, u64 stack, u64 pc,
 {
         struct thread *thread;
         int cap, ret = 0;
-        kinfo("create thread\n");
 
         if (!cap_group) {
                 ret = -ECAPBILITY;
@@ -404,7 +403,6 @@ void sys_thread_exit(void)
         printk("\nBack to kernel.\n");
 #endif
         /* LAB 3 TODO BEGIN */
-        // current_thread->thread_ctx->state = TS_INTER;
         current_thread->thread_ctx->thread_exit_state = TE_EXITING;
         // obj_free(cur_thread);
         // current_threads[cpu_id] = NULL;
@@ -445,7 +443,28 @@ int sys_set_affinity(u64 thread_cap, s32 aff)
         }
 
         /* LAB 4 TODO BEGIN */
-        thread->thread_ctx->affinity = aff;
+        if (thread->thread_ctx->thread_exit_state != TE_RUNNING) {
+            goto out;
+        }
+
+        if (thread->thread_ctx->cpuid != aff) {
+            if (thread->thread_ctx->state == TS_RUNNING) {
+                thread->thread_ctx->affinity = aff;
+            } 
+            else {
+                if (thread->thread_ctx->state == TS_READY) {
+                        sched_dequeue(thread);
+                        thread->thread_ctx->affinity = aff;
+                        sched_enqueue(thread);
+                } 
+                else {
+                        goto out;
+                }
+            }
+        } 
+        else {
+            thread->thread_ctx->affinity = aff;
+        }
 
         /* LAB 4 TODO END */
         if (thread_cap != -1)

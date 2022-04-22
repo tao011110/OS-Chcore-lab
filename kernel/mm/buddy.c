@@ -145,7 +145,7 @@ static struct page *merge_page(struct phys_mem_pool *pool, struct page *page)
                 return page;
         }
         struct page *buddy_page = get_buddy_chunk(pool, page);
-        if(buddy_page == NULL || buddy_page->allocated){
+        if(buddy_page == NULL || buddy_page->allocated || page->order != buddy_page->order){
                 return page;
         }
         struct page *merged_page  = NULL;

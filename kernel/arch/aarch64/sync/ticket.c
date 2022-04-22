@@ -138,7 +138,6 @@ void unlock_kernel(void)
 {
         BUG_ON(!is_locked(&big_kernel_lock));
         /* LAB 4 TODO BEGIN */
-        // kinfo("unlock kernel\n");
         unlock(&big_kernel_lock);
 
         /* LAB 4 TODO END */
