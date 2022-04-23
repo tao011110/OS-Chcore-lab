@@ -66,7 +66,7 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                         pa = virt_to_phys(pgtbl);
                         memset(pgtbl, 0, PAGE_SIZE);
                         commit_page_to_pmo(pmo, index, pa);
-                        map_range_in_pgtbl(vmspace->pgtbl, fault_addr, pa, PAGE_SIZE, vmr->perm);
+                        map_range_in_pgtbl(vmspace->pgtbl, fault_addr, pa, PAGE_SIZE, perm);
 
                         /* LAB 3 TODO END */
 #ifdef CHCORE_LAB3_TEST
@@ -101,8 +101,8 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
                         // else{
                                 
                         // }
-                        unmap_range_in_pgtbl(vmspace->pgtbl, fault_addr, PAGE_SIZE);
-                        map_range_in_pgtbl(vmspace->pgtbl, fault_addr, pa, PAGE_SIZE, vmr->perm);
+                        // unmap_range_in_pgtbl(vmspace->pgtbl, fault_addr, PAGE_SIZE);
+                        map_range_in_pgtbl(vmspace->pgtbl, fault_addr, pa, PAGE_SIZE, perm);
 
                         /* LAB 3 TODO END */
 #ifdef CHCORE_LAB3_TEST

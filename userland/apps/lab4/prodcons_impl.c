@@ -31,7 +31,7 @@ void *producer(void *arg)
                 i++;
         }
         __sync_fetch_and_add(&global_exit, 1);
-        printf("global is %d  at producer\n", global_exit);
+        // printf("global is %d  at producer\n", global_exit);
         return 0;
 }
 
@@ -57,6 +57,6 @@ void *consumer(void *arg)
                 i++;
         }
         __sync_fetch_and_add(&global_exit, 1);
-        printf("global is %d  at consumer\n", global_exit);
+        // printf("global is %d  at consumer\n", global_exit);
         return 0;
 }
