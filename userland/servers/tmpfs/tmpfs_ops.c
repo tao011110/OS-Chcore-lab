@@ -81,6 +81,13 @@ int fs_creat(const char *path)
 	BUG_ON(*path != '/');
 
 	/* LAB 5 TODO BEGIN */
+	if(tfs_namex(&dirat, &leaf, 1)){
+		return -1;
+	}
+	err = tfs_creat(dirat, leaf, 1);
+	if(err){
+		return -1;
+	}
 
 	/* LAB 5 TODO END */
 	return 0;
@@ -103,6 +110,10 @@ int tmpfs_unlink(const char *path, int flags)
 	BUG_ON(*path != '/');
 
 	/* LAB 5 TODO BEGIN */
+	if(tfs_namex(&dirat, &leaf, 1)){
+		return -1;
+	}
+	err = tfs_remove(dirat, leaf, strlen(leaf));
 
 	/* LAB 5 TODO END */
 	return err;
@@ -123,6 +134,10 @@ int tmpfs_mkdir(const char *path, mode_t mode)
 	BUG_ON(*path != '/');
 
 	/* LAB 5 TODO BEGIN */
+	if(tfs_namex(&dirat, &leaf, 1)){
+		return -1;
+	}
+	err = tfs_mkdir(dirat, leaf, 1);
 
 	/* LAB 5 TODO END */
 	return err;
@@ -158,9 +173,10 @@ int tfs_scan(struct inode *dir, unsigned int start, void *buf, void *end,
 	void *p = buf;
 	unsigned char type;
 	struct dentry *iter;
-
+	printf("tfs_scan\n");
 	for_each_in_htable(iter, b, node, &dir->dentries)
 	{
+		printf("cnt is %d\n", cnt);
 		if (cnt >= start) {
 			type = iter->inode->type;
 			ino = iter->inode->size;
