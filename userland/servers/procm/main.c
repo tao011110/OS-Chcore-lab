@@ -77,15 +77,18 @@ static void *procm_main(void *arg)
         ipc_register_server(ipc_dispatch);
 
         /* start tmpfs */
+        printf("spawn tmpfs.srv \n");
         ret = spawn("/tmpfs.srv", &cap);
         chcore_bug_on(ret < 0);
         __chcore_set_tmpfs_cap(cap);
 
         /* start fsm */
+        printf("spawn fsm.srv \n");
         ret = spawn("/fsm.srv", &cap);
         chcore_bug_on(ret < 0);
         __chcore_set_fsm_cap(cap);
  
+        printf("spawn shell.srv \n");
         int shell_cap;
         spawn("/shell.srv", &shell_cap);
 

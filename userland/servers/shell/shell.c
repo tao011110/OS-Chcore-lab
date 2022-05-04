@@ -166,6 +166,11 @@ char *readline(const char *prompt)
 
 	/* LAB 5 TODO BEGIN */
 	/* Fill buf and handle tabs with do_complement(). */
+	if(c == '\n'){
+
+	}
+	complement[i] = c;
+	i++;
 
 	/* LAB 5 TODO END */
 	}
@@ -183,6 +188,30 @@ void print_file_content(char* path)
 {
 
 	/* LAB 5 TODO BEGIN */
+	int file_fd = alloc_fd();
+	struct ipc_msg *ipc_msg_open = ipc_create_msg(
+        fs_ipc_struct_for_shell, sizeof(struct fs_request), 0);
+    chcore_assert(ipc_msg_open);
+	struct fs_request * fr_open =
+                   (struct fs_request *)ipc_get_msg_data(ipc_msg_open);
+	fr_open->req = FS_REQ_OPEN;
+	strcpy(fr_open->open.pathname, path);
+    fr_open->open.flags = O_RDONLY;
+    fr_open->open.new_fd = file_fd;
+	file_fd = ipc_call(fs_ipc_struct_for_shell, ipc_msg_open);
+
+	struct ipc_msg *ipc_msg_read = ipc_create_msg(
+        fs_ipc_struct_for_shell, sizeof(struct fs_request), 0);
+	chcore_assert(ipc_msg_read);
+	struct fs_request * fr_read =
+                   (struct fs_request *)ipc_get_msg_data(ipc_msg_read);
+	fr_read->req = FS_REQ_READ;
+	fr_read->read.count = BUFLEN;
+	int ret = ipc_call(fs_ipc_struct_for_shell, ipc_msg_read);
+	char *buf;
+	memcpy(buf, ipc_get_msg_data(ipc_msg_read), ret);
+	printf("print_file_content\n");
+	printf("%s", buf);
 
 	/* LAB 5 TODO END */
 
@@ -193,6 +222,30 @@ void fs_scan(char *path)
 {
 
 	/* LAB 5 TODO BEGIN */
+	int file_fd = alloc_fd();
+	struct ipc_msg *ipc_msg_open = ipc_create_msg(
+        fs_ipc_struct_for_shell, sizeof(struct fs_request), 0);
+    chcore_assert(ipc_msg_open);
+	struct fs_request * fr_open =
+                   (struct fs_request *)ipc_get_msg_data(ipc_msg_open);
+	fr_open->req = FS_REQ_OPEN;
+	strcpy(fr_open->open.pathname, path);
+    fr_open->open.flags = O_RDONLY;
+    fr_open->open.new_fd = file_fd;
+	file_fd = ipc_call(fs_ipc_struct_for_shell, ipc_msg_open);
+
+	char name[BUFLEN];
+	char scan_buf[BUFLEN];
+	int offset;
+	struct dirent *p;
+	int ret = getdents(file_fd, scan_buf, BUFLEN);
+
+	for (offset = 0; offset < ret; offset += p->d_reclen) {
+		p = (struct dirent *)(scan_buf + offset);
+		get_dent_name(p, name);
+		printf("%s ", name);
+	}
+
 
 	/* LAB 5 TODO END */
 }
@@ -226,6 +279,11 @@ int do_cat(char *cmdline)
 int do_echo(char *cmdline)
 {
 	/* LAB 5 TODO BEGIN */
+	cmdline += 4;
+	while(*cmdline = " "){
+		cmdline++;
+	}
+	printf("%s", cmdline);
 
 	/* LAB 5 TODO END */
 	return 0;

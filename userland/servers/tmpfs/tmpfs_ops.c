@@ -176,7 +176,6 @@ int tfs_scan(struct inode *dir, unsigned int start, void *buf, void *end,
 	printf("tfs_scan\n");
 	for_each_in_htable(iter, b, node, &dir->dentries)
 	{
-		printf("cnt is %d\n", cnt);
 		if (cnt >= start) {
 			type = iter->inode->type;
 			ino = iter->inode->size;
