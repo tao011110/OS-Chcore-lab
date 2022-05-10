@@ -145,9 +145,7 @@ static int create_connection(struct thread *source, struct thread *target,
         /* LAB 4: map shared ipc buf to vmspace of server and client */
         /* LAB 4 TODO BEGIN */
         ret = vmspace_map_range(target->vmspace, server_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
-        ret = vmspace_map_range(target->vmspace, client_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
         ret = vmspace_map_range(source->vmspace, client_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
-        ret = vmspace_map_range(source->vmspace, server_buf_base, buf_size, VMR_READ | VMR_WRITE, buf_pmo);
 
         /* LAB 4 TODO END */
 
@@ -204,8 +202,6 @@ static u64 thread_migrate_to_server(struct ipc_connection *conn, u64 arg)
          * */
         /* LAB 4 TODO BEGIN: use arch_set_thread_stack*/
         arch_set_thread_stack(target, target_ipc_config->vm_config.stack_base_addr + target_ipc_config->vm_config.stack_size);
-        // arch_set_thread_stack(target, conn->server_stack_top);
-
         /* LAB 4 TODO END */
 
         /**
@@ -500,7 +496,7 @@ u32 sys_register_client(u32 server_cap, u64 vm_config_ptr)
                 if (r < 0)
                         goto out_obj_put_conn;
         }
-
+        
         r = conn_cap;
 
 out_obj_put_conn:
@@ -588,9 +584,7 @@ u64 sys_ipc_call(u32 conn_cap, struct ipc_msg *ipc_msg, u64 cap_num)
          * Then what value should the arg be?
          * */
         /* LAB 4 TODO BEGIN: set arg */
-
-        arg = (u64)ipc_msg;
-
+        arg = conn->buf.server_user_addr;
         /* LAB 4 TODO END */
 
         thread_migrate_to_server(conn, arg);

@@ -161,8 +161,6 @@ static int tfs_mknod(struct inode *dir, const char *name, size_t len, int mkdir)
 	inode->size = len;
 	dent = new_dent(inode, name, strlen(name));
 	htable_add(&(dir->dentries), dent->name.hash, &dent->node);
-	printf("mk name is %c\n", *name);
-	printf("mk hash is %d\n", dent->name.hash);
 
 	/* LAB 5 TODO END */
 
@@ -256,7 +254,7 @@ int tfs_namex(struct inode **dirat, const char **name, int mkdir_p)
 			}
 		}
 		buff[i] = **name;
-		printf("buff[i] is %c and i is %d\n", buff[i], i);
+		// printf("buff[i] is %c and i is %d\n", buff[i], i);
 		i++;
 		++(*name);
 	}
@@ -339,7 +337,7 @@ ssize_t tfs_file_write(struct inode * inode, off_t offset, const char *data,
 	void *page;
 
 	/* LAB 5 TODO BEGIN */
-	printf("do tfs_file_write\n");
+	// printf("do tfs_file_write\n");
 	int page_max = inode->size / PAGE_SIZE;
 	if(offset+size > inode->size){
 		inode->size = offset+size;
@@ -347,26 +345,26 @@ ssize_t tfs_file_write(struct inode * inode, off_t offset, const char *data,
 	page_no = offset / PAGE_SIZE;
 	page_off = offset % PAGE_SIZE;
 	int page_end = (offset + size) / PAGE_SIZE;
-	printf("page_no is %d\n", page_no);
-	printf("page_end is %d\n", page_end);
-	printf("page_max is %d\n", page_max);
+	// printf("page_no is %d\n", page_no);
+	// printf("page_end is %d\n", page_end);
+	// printf("page_max is %d\n", page_max);
 	if(page_max < page_no){
 		for(int index = page_max + 1; index < page_no; index++){
-			printf("index is %d\n", index);
+			// printf("index is %d\n", index);
 			page = radix_get(&inode->data, index);
 			if(page == NULL){
-				printf("page is NULL\n");
+				// printf("page is NULL\n");
 				page = malloc(PAGE_SIZE);
 				radix_add(&inode->data, index, page);
 			}
 		}
 	}
-	printf("do write\n");
+	// printf("do write\n");
 	for(int index = page_no; index <= page_end; index++){
-		printf("index is %d\n", index);
+		// printf("index is %d\n", index);
 		page = radix_get(&inode->data, index);
 		if(page == NULL){
-			printf("page is NULL\n");
+			// printf("page is NULL\n");
 			page = malloc(PAGE_SIZE);
 			radix_add(&inode->data, index, page);
 		}
@@ -415,14 +413,19 @@ ssize_t tfs_file_read(struct inode * inode, off_t offset, char *buff,
 	void *page;
 
 	/* LAB 5 TODO BEGIN */
+	// printf("do tfs_file_read\n");
 	if(size + offset > inode->size){
 		size = inode->size - offset;
 	}
-	printf("the actual size if %d\n", size);
+	// printf("inode->size is %d\n", inode->size);
+	// printf("the actual size is %d\n", size);
 	page_no = offset / PAGE_SIZE;
 	page_off = offset % PAGE_SIZE;
 	int page_end = (offset + size) / PAGE_SIZE;
+	// printf("page_no is %d, page_end is %d\n", page_no, page_end);
+	// printf("page_off is %d\n", page_off);
 	for(int index = page_no; index <= page_end; index++){
+		// printf("index is %d\n", index);
 		page = radix_get(&inode->data, index);
 		if(index == page_no){
 			if(page_end == page_no){
@@ -431,7 +434,7 @@ ssize_t tfs_file_read(struct inode * inode, off_t offset, char *buff,
 			else{
 				to_read = PAGE_SIZE - page_off;
 			}
-			memcpy(buff + cur_off, page + page_off, to_read);
+			memcpy(buff + cur_off - offset, page + page_off, to_read);
 			size -= to_read;
 			cur_off += to_read;
 		}
@@ -442,7 +445,7 @@ ssize_t tfs_file_read(struct inode * inode, off_t offset, char *buff,
 			else{
 				to_read = PAGE_SIZE;
 			}
-			memcpy(buff + cur_off, page, to_read);
+			memcpy(buff + cur_off - offset, page, to_read);
 			size -= to_read;
 			cur_off += to_read;
 		}
@@ -480,9 +483,9 @@ int tfs_load_image(const char *start)
 		if(!tfs_namex(&dirat, &leaf, 1)){
 			dent = tfs_lookup(dirat, leaf, strlen(leaf));
 			if(dent == NULL){
-				printf("dent is NULL\n");
+				// printf("dent is NULL\n");
 				if(len != 0){
-					printf("create file\n");
+					// printf("create file\n");
 					tfs_creat(dirat, leaf, len);
 					dent = tfs_lookup(dirat, leaf, strlen(leaf));
 					if(dent == NULL){
@@ -490,12 +493,15 @@ int tfs_load_image(const char *start)
 					}
 				}
 				else{
-					printf("create dir\n");
+					// printf("create dir\n");
 					tfs_mkdir(dirat, leaf, 1);
 					continue;
 				}
 			}
+			
+			// printf("file %s write in %s   and len is %d\n", leaf, f->data, len);
 			write_count = tfs_file_write(dent->inode, 0, f->data, len);
+			// printf("size is %d\n", dent->inode->size);
 		}
 
 	/* LAB 5 TODO END */
@@ -527,6 +533,7 @@ static int dirent_filler(void **dirpp, void *end, char *name, off_t off,
 /* path[0] must be '/' */
 struct inode *tfs_open_path(const char *path)
 {
+	// printf("do tfs_open_path\n");
 	struct inode *dirat = NULL;
 	const char *leaf = path;
 	struct dentry *dent;
@@ -540,6 +547,13 @@ struct inode *tfs_open_path(const char *path)
 		return NULL;
 
 	dent = tfs_lookup(dirat, leaf, strlen(leaf));
+	// printf("leaf is %s\n", leaf);
+	// if(dent == NULL){
+	// 	printf("dent is NULL\n");
+	// }
+	// else{
+	// 	printf("dent is not NULL\n");
+	// }
 	return dent ? dent->inode : NULL;
 }
 

@@ -173,7 +173,7 @@ int tfs_scan(struct inode *dir, unsigned int start, void *buf, void *end,
 	void *p = buf;
 	unsigned char type;
 	struct dentry *iter;
-	printf("tfs_scan\n");
+	
 	for_each_in_htable(iter, b, node, &dir->dentries)
 	{
 		if (cnt >= start) {

@@ -108,6 +108,44 @@ int fsm_write_file(const char* path, char* buf, unsigned long size) {
         int ret = 0;
 
         /* LAB 5 TODO BEGIN */
+	// printf("%s\n", buf);
+        struct ipc_msg *ipc_msg_cap = ipc_create_msg(
+                fsm_ipc_struct, sizeof(struct fs_request), 0);
+        chcore_assert(ipc_msg_cap);
+        struct fs_request * fr_cap =
+                (struct fs_request *)ipc_get_msg_data(ipc_msg_cap);
+        fr_cap->req = FS_REQ_GET_FS_CAP;
+        strcpy(fr_cap->getfscap.pathname, path);
+        ret = ipc_call(fsm_ipc_struct, ipc_msg_cap);
+        int cap = ipc_get_msg_cap(ipc_msg_cap, 0);
+        // printf("cap is %d\n", cap);
+        ipc_destroy_msg(fsm_ipc_struct, ipc_msg_cap);
+
+        struct fs_cap_info_node *node = get_fs_cap_info(cap);
+        struct ipc_msg *ipc_msg_open = ipc_create_msg(
+                node->fs_ipc_struct, sizeof(struct fs_request), 0);
+        struct fs_request * fr_open =
+                   (struct fs_request *)ipc_get_msg_data(ipc_msg_open);
+	fr_open->req = FS_REQ_OPEN;
+	strcpy(fr_open->open.pathname, fr_cap->getfscap.pathname);
+        fr_open->open.flags = O_RDONLY;
+        int file_fd = 1;
+        fr_open->open.new_fd = file_fd;
+	file_fd = ipc_call(node->fs_ipc_struct, ipc_msg_open);
+	ipc_destroy_msg(node->fs_ipc_struct, ipc_msg_open);
+
+        int cnt = size + 1;
+	struct ipc_msg *ipc_msg_write = ipc_create_msg(
+                node->fs_ipc_struct, sizeof(struct fs_request) + cnt + 1, 0);
+	chcore_assert(ipc_msg_write);
+	struct fs_request * fr_write =
+                   (struct fs_request *)ipc_get_msg_data(ipc_msg_write);
+	fr_write->req = FS_REQ_WRITE;
+	fr_write->write.count = size;
+	fr_write->write.fd = file_fd;
+        ipc_set_msg_data(ipc_msg_write, buf, sizeof(struct fs_request), cnt + 1);
+	ret = ipc_call(node->fs_ipc_struct, ipc_msg_write);
+	ipc_destroy_msg(node->fs_ipc_struct, ipc_msg_write);
 
         /* LAB 5 TODO END */
 
@@ -123,6 +161,43 @@ int fsm_read_file(const char* path, char* buf, unsigned long size) {
         int ret = 0;
 
         /* LAB 5 TODO BEGIN */
+        struct ipc_msg *ipc_msg_cap = ipc_create_msg(
+                fsm_ipc_struct, sizeof(struct fs_request), 0);
+        chcore_assert(ipc_msg_cap);
+        struct fs_request * fr_cap =
+                (struct fs_request *)ipc_get_msg_data(ipc_msg_cap);
+        fr_cap->req = FS_REQ_GET_FS_CAP;
+        strcpy(fr_cap->getfscap.pathname, path);
+        ret = ipc_call(fsm_ipc_struct, ipc_msg_cap);
+        int cap = ipc_get_msg_cap(ipc_msg_cap, 0);
+        printf("cap is %d\n", cap);
+        ipc_destroy_msg(fsm_ipc_struct, ipc_msg_cap);
+
+        struct fs_cap_info_node *node = get_fs_cap_info(cap);
+        struct ipc_msg *ipc_msg_open = ipc_create_msg(
+                node->fs_ipc_struct, sizeof(struct fs_request), 0);
+        struct fs_request * fr_open =
+                   (struct fs_request *)ipc_get_msg_data(ipc_msg_open);
+	fr_open->req = FS_REQ_OPEN;
+	strcpy(fr_open->open.pathname, fr_cap->getfscap.pathname);
+        fr_open->open.flags = O_RDONLY;
+        int file_fd = 1;
+        fr_open->open.new_fd = file_fd;
+	file_fd = ipc_call(node->fs_ipc_struct, ipc_msg_open);
+	ipc_destroy_msg(node->fs_ipc_struct, ipc_msg_open);
+
+	struct ipc_msg *ipc_msg_read = ipc_create_msg(
+        node->fs_ipc_struct, sizeof(struct fs_request), 0);
+	chcore_assert(ipc_msg_read);
+	struct fs_request * fr_read =
+                   (struct fs_request *)ipc_get_msg_data(ipc_msg_read);
+	fr_read->req = FS_REQ_READ;
+	fr_read->read.count = size;
+	fr_read->read.fd = file_fd;
+	ret = ipc_call(node->fs_ipc_struct, ipc_msg_read);
+	memcpy(buf, ipc_get_msg_data(ipc_msg_read), ret);
+	ipc_destroy_msg(node->fs_ipc_struct, ipc_msg_read);
+	// printf("%s\n", buf);
 
         /* LAB 5 TODO END */
 
